@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ticket/register.dart';
+import 'package:ticket/views/register.dart';
+import 'package:ticket/firebase/authfirebase.dart';
+import 'package:ticket/touch.dart';
+import 'package:ticket/views/user_home.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -76,8 +79,24 @@ class _Logo extends StatelessWidget {
 
 /* -------------------- CARD -------------------- */
 
-class _LoginCard extends StatelessWidget {
+class _LoginCard extends StatefulWidget {
   const _LoginCard();
+
+  @override
+  State<_LoginCard> createState() => _LoginCardState();
+}
+
+class _LoginCardState extends State<_LoginCard> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,12 +119,14 @@ class _LoginCard extends StatelessWidget {
             label: 'Email',
             icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
+            controller: _emailController,
           ),
           const SizedBox(height: 16),
           _InputField(
             label: 'Password',
             icon: Icons.lock_outline,
             obscureText: true,
+            controller: _passwordController,
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -119,27 +140,61 @@ class _LoginCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              onPressed: () {
-                // TODO: Firebase login
-              },
-              child: const Text(
-                'LOGIN',
-                style: TextStyle(fontSize: 18),
-              ),
+              onPressed: _loading
+                  ? null
+                  : () async {
+                      final email = _emailController.text.trim();
+                      final password = _passwordController.text.trim();
+
+                      // Admin shortcut
+                      if (email == 'admin@gmail.com' && password == 'admin123') {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                        );
+                        return;
+                      }
+
+                      setState(() => _loading = true);
+                      try {
+                        final user = await AuthService.instance
+                            .login(email: email, password: password);
+                        if (user != null) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const UserHome()),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(e.toString())),
+                        );
+                      } finally {
+                        if (mounted) setState(() => _loading = false);
+                      }
+                    },
+              child: _loading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text(
+                      'LOGIN',
+                      style: TextStyle(fontSize: 18),
+                    ),
             ),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: () {
-
               Navigator.push(
-  context,
-  MaterialPageRoute(builder: (_) => const RegisterPage()),
-);
-
+                context,
+                MaterialPageRoute(builder: (_) => const RegisterPage()),
+              );
             },
             child: const Text(
-              'Forgot password?',
+              "Don't have an account? Register",
               style: TextStyle(color: Colors.indigo),
             ),
           ),
@@ -156,17 +211,20 @@ class _InputField extends StatelessWidget {
   final IconData icon;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final TextEditingController? controller;
 
   const _InputField({
     required this.label,
     required this.icon,
     this.obscureText = false,
     this.keyboardType,
+    this.controller,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       style: const TextStyle(color: Colors.black87),
