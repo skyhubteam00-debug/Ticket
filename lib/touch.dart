@@ -98,7 +98,7 @@ class AdminDashboard extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Queue Control'),
-        centerTitle: true,
+        centerTitle: true,automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirestoreTickets.instance.watchTickets(),
